@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "XPath Helper",
+  "version": "1.0.0",
+  "description": "为开发者和测试人员提供的XPath便捷查看定位的工具",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "32": "icons/icon32.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["xpath-suggestions.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

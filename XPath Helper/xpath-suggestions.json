@@ -1,0 +1,37 @@
+[
+
+  { "expression": "ancestor", "description": "选取当前节点的所有祖先节点" },
+  { "expression": "ancestor-or-self", "description": "选取当前节点以及其祖先节点" },
+  { "expression": "attribute", "description": "选取当前节点的所有属性" },
+  { "expression": "child", "description": "选取当前节点的所有直接子元素" },
+  { "expression": "descendant", "description": "选取当前节点的所有后代元素" },
+  { "expression": "descendant-or-self", "description": "选取当前节点及所有后代元素" },
+  { "expression": "following", "description": "选取文档中当前节点之后的所有节点" },
+  { "expression": "following-sibling", "description": "选取当前节点之后的同级节点" },
+  { "expression": "namespace", "description": "选取当前节点的命名空间节点" },
+  { "expression": "parent", "description": "选取当前节点的父节点" },
+  { "expression": "preceding", "description": "选取文档中当前节点之前的所有节点" },
+  { "expression": "preceding-sibling", "description": "选取当前节点之前的同级节点" },
+  { "expression": "self", "description": "选取当前节点本身" },
+
+  { "expression": "position", "description": "返回节点在节点集中的位置" },
+  { "expression": "last", "description": "返回节点集中最后一个节点的位置" },
+  { "expression": "count", "description": "返回节点集中节点的数量" },
+
+  { "expression": "local-name", "description": "返回节点的本地名称" },
+  { "expression": "name", "description": "返回节点的名称" },
+  { "expression": "string", "description": "将对象转换为字符串" },
+  { "expression": "starts-with", "description": "测试字符串是否以指定文本开头" },
+  { "expression": "contains", "description": "测试字符串是否包含指定文本" },
+  { "expression": "substring", "description": "返回字符串的子串" },
+  { "expression": "substring-after", "description": "返回某子串之后的内容" },
+  { "expression": "substring-before", "description": "返回某子串之前的内容" },
+  { "expression": "normalize-space", "description": "移除字符串前后空格并规范中间空格" },
+  { "expression": "boolean", "description": "将值转换为布尔类型" },
+  { "expression": "number", "description": "将值转换为数字类型" },
+  { "expression": "sum", "description": "返回节点集中所有数值的和" },
+  { "expression": "floor", "description": "向下取整" },
+  { "expression": "ceiling", "description": "向上取整" },
+  { "expression": "round", "description": "四舍五入取整" },
+  { "expression": "translate", "description": "字符串替换/转换" }
+]
