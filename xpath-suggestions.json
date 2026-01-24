@@ -1,5 +1,4 @@
 [
-
   { "expression": "ancestor", "description": "选取当前节点的所有祖先节点" },
   { "expression": "ancestor-or-self", "description": "选取当前节点以及其祖先节点" },
   { "expression": "attribute", "description": "选取当前节点的所有属性" },

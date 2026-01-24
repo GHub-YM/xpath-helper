@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "XPath Helper",
-  "version": "1.0.2",
+  "version": "1.0.3",
+  
   "description": "为开发者和测试人员提供的XPath便捷查看定位的工具",
   "action": {
     "default_icon": {
@@ -10,7 +11,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "xpath元素定位辅助"
+    "default_title": "xpath元素定位辅助插件"
   },
   "icons": {
     "128": "icons/icon128.png",
@@ -54,7 +55,8 @@
         "file:///*"
       ],
       "resources": [
-        "iframe.html"
+        "iframe.html",
+        "xpath-suggestions.json"
       ]
     },
     {
