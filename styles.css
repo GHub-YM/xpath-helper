@@ -817,52 +817,233 @@ input:focus + .xpath-slider {
 
 /* 高亮样式 */
 .xpath-highlight {
-  outline: 2px solid #3b82f6 !important;
-  background-color: rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  border-radius: 4px !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  animation: xpath-highlight-pulse 1.5s ease-in-out infinite alternate;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  position: relative !important;
+  z-index: 1 !important;
+  transform: none !important;
+}
+
+/* 为高亮元素添加伪元素，用于实现流动虚线边框效果 */
+.xpath-highlight::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: -1;
+  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(0deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(0deg, #3b82f6 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 8px 2px, 8px 2px, 2px 8px, 2px 8px;
+  background-position: left top, right bottom, left bottom, right top;
+  animation: xpath-border-flow 2s linear infinite;
 }
 
 /* 不同层级元素的高亮颜色 */
 .xpath-highlight.level-0 {
-  outline-color: #3b82f6 !important;
-  background-color: rgba(59, 130, 246, 0.1) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+.xpath-highlight.level-0::before {
+  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(0deg, #3b82f6 50%, transparent 50%),
+                    linear-gradient(0deg, #3b82f6 50%, transparent 50%);
 }
 
 .xpath-highlight.level-1 {
-  outline-color: #10b981 !important;
-  background-color: rgba(16, 185, 129, 0.1) !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+
+.xpath-highlight.level-1::before {
+  background-image: linear-gradient(90deg, #10b981 50%, transparent 50%),
+                    linear-gradient(90deg, #10b981 50%, transparent 50%),
+                    linear-gradient(0deg, #10b981 50%, transparent 50%),
+                    linear-gradient(0deg, #10b981 50%, transparent 50%);
 }
 
 .xpath-highlight.level-2 {
-  outline-color: #f59e0b !important;
-  background-color: rgba(245, 158, 11, 0.1) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+.xpath-highlight.level-2::before {
+  background-image: linear-gradient(90deg, #f59e0b 50%, transparent 50%),
+                    linear-gradient(90deg, #f59e0b 50%, transparent 50%),
+                    linear-gradient(0deg, #f59e0b 50%, transparent 50%),
+                    linear-gradient(0deg, #f59e0b 50%, transparent 50%);
 }
 
 .xpath-highlight.level-3 {
-  outline-color: #8b5cf6 !important;
-  background-color: rgba(139, 92, 246, 0.1) !important;
+  background-color: rgba(139, 92, 246, 0.08) !important;
+}
+
+.xpath-highlight.level-3::before {
+  background-image: linear-gradient(90deg, #8b5cf6 50%, transparent 50%),
+                    linear-gradient(90deg, #8b5cf6 50%, transparent 50%),
+                    linear-gradient(0deg, #8b5cf6 50%, transparent 50%),
+                    linear-gradient(0deg, #8b5cf6 50%, transparent 50%);
 }
 
 .xpath-highlight.level-4 {
-  outline-color: #ef4444 !important;
-  background-color: rgba(239, 68, 68, 0.1) !important;
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+.xpath-highlight.level-4::before {
+  background-image: linear-gradient(90deg, #ef4444 50%, transparent 50%),
+                    linear-gradient(90deg, #ef4444 50%, transparent 50%),
+                    linear-gradient(0deg, #ef4444 50%, transparent 50%),
+                    linear-gradient(0deg, #ef4444 50%, transparent 50%);
 }
 
 .xpath-highlight.level-5 {
-  outline-color: #6366f1 !important;
-  background-color: rgba(99, 102, 241, 0.1) !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
 }
 
-@keyframes xpath-highlight-pulse {
-  from {
-    opacity: 0.8;
-    outline-width: 2px;
+.xpath-highlight.level-5::before {
+  background-image: linear-gradient(90deg, #6366f1 50%, transparent 50%),
+                    linear-gradient(90deg, #6366f1 50%, transparent 50%),
+                    linear-gradient(0deg, #6366f1 50%, transparent 50%),
+                    linear-gradient(0deg, #6366f1 50%, transparent 50%);
+}
+
+/* 流动虚线边框动画 */
+@keyframes xpath-border-flow {
+  0% {
+    background-position: 0px 0px, 100% 100%, 0px 100%, 100% 0px;
   }
-  to {
-    opacity: 1;
-    outline-width: 2px;
+  100% {
+    background-position: 8px 0px, 90% 100%, 0px 90%, 100% 8px;
   }
+}
+
+/* 元素信息提示框 */
+.xpath-element-tooltip {
+  position: absolute;
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 300px;
+  z-index: 10000;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  word-wrap: break-word;
+  white-space: normal;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: xpath-tooltip-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.xpath-element-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: rgba(17, 24, 39, 0.95);
+  transform: rotate(45deg);
+}
+
+.xpath-element-tooltip .tooltip-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.xpath-element-tooltip .tooltip-label {
+  font-weight: 600;
+  color: #94a3b8;
+  margin-right: 8px;
+}
+
+.xpath-element-tooltip .tooltip-value {
+  color: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  word-break: break-all;
+}
+
+.xpath-element-tooltip .tooltip-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 元素信息提示框（新样式） */
+.xpath-element-info {
+  position: absolute;
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 300px;
+  z-index: 10000;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  word-wrap: break-word;
+  white-space: normal;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: xpath-tooltip-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.xpath-element-info::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: rgba(17, 24, 39, 0.95);
+  transform: rotate(45deg);
+}
+
+.xpath-element-info-header {
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 13px;
+}
+
+.xpath-element-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xpath-element-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.xpath-element-info-label {
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.xpath-element-info-value {
+  color: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  word-break: break-all;
+  flex: 1;
 }
 
 /* 弹窗淡入动画 */

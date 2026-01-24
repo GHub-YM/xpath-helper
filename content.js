@@ -9,8 +9,21 @@ function clearHighlights() {
     for (let i = 0; i < 6; i++) {
       element.classList.remove(`level-${i}`);
     }
+    // 移除事件监听器，避免内存泄漏
+    element.removeEventListener('mouseenter', showElementInfo);
+    element.removeEventListener('mouseleave', hideElementInfo);
   });
   highlightedElements = [];
+  
+  // 清除元素信息提示
+  if (elementInfoTooltip && elementInfoTooltip.parentNode) {
+    elementInfoTooltip.remove();
+    elementInfoTooltip = null;
+  }
+  if (elementInfoTimer) {
+    clearTimeout(elementInfoTimer);
+    elementInfoTimer = null;
+  }
 }
 
 
@@ -259,17 +272,11 @@ function createPanel() {
       const response = await fetch(suggestionsUrl);
       if (response.ok) {
         xpathSuggestions = await response.json();
+      }else{
+        console.error('加载XPath推荐词失败:', response.statusText);
       }
     } catch (error) {
-      console.error('加载XPath推荐词失败:', error);
-      // 使用默认推荐词作为 fallback
-      xpathSuggestions = [
-        { "expression": "//div", "description": "搜索所有<div>元素" },
-        { "expression": "//span", "description": "搜索所有<span>元素" },
-        { "expression": "//a", "description": "搜索所有<a>链接元素" },
-        { "expression": "//button", "description": "搜索所有<button>元素" },
-        { "expression": "//input", "description": "搜索所有<input>输入框" }
-      ];
+       console.error('加载XPath推荐词失败:', error);
     } finally {
       // 隐藏加载状态
       hideLoading();
@@ -285,69 +292,39 @@ function createPanel() {
     if (!trimmedValue) return [];
     
     // 提取输入值中最后一个斜杠后的文本作为匹配关键词
-    const lastSlashIndex = trimmedValue.lastIndexOf('/');
+    let lastSlashIndex = trimmedValue.lastIndexOf('/');
+    // 处理以斜杠结尾的情况
+    if (lastSlashIndex === trimmedValue.length - 1) {
+      // 找到倒数第二个斜杠
+      lastSlashIndex = trimmedValue.lastIndexOf('/', lastSlashIndex - 1);
+    }
     const keyword = lastSlashIndex === -1 ? trimmedValue : trimmedValue.substring(lastSlashIndex + 1);
     
     // 转换为小写进行匹配
     const lowercaseKeyword = keyword.toLowerCase();
-    const lowercaseInput = trimmedValue.toLowerCase();
+    
+    // 如果关键词为空字符串，不返回任何提示词
+    if (!lowercaseKeyword) return [];
     
     // 匹配推荐词并计算相关性分数
-    return xpathSuggestions.map(suggestion => {
+    return xpathSuggestions.filter(suggestion => {
       const expression = suggestion.expression;
-      const lowercaseExpr = expression.toLowerCase();
-      let score = 0;
-      
-      // 1. 精确匹配整个表达式
-      if (lowercaseExpr === lowercaseInput) {
-        score += 100;
-      }
-      
-      // 2. 表达式以输入值开头
-      if (lowercaseExpr.startsWith(lowercaseInput)) {
-        score += 80;
-      }
-      
-      // 3. 提取表达式中最后一个斜杠后的部分进行匹配
+      // 提取表达式中最后一个斜杠后的部分进行匹配
       const lastExprSlashIndex = expression.lastIndexOf('/');
       const exprKeyword = lastExprSlashIndex !== -1 ? expression.substring(lastExprSlashIndex + 1) : expression;
       const lowercaseExprKeyword = exprKeyword.toLowerCase();
       
-      // 4. 关键词精确匹配
-      if (lowercaseExprKeyword === lowercaseKeyword) {
-        score += 70;
-      }
-      
-      // 5. 关键词以输入开头
-      if (lowercaseExprKeyword.startsWith(lowercaseKeyword)) {
-        score += 60;
-      }
-      
-      // 6. 模糊匹配（关键词包含输入）
-      if (lowercaseExprKeyword.includes(lowercaseKeyword)) {
-        score += 40;
-      }
-      
-      // 7. 表达式中包含输入值
-      if (lowercaseExpr.includes(lowercaseKeyword)) {
-        score += 30;
-      }
-      
-      // 8. 根据表达式长度调整分数（更短的表达式通常更常用）
-      score += (100 - Math.min(expression.length, 100)) / 10;
-      
-      return {
-        suggestion,
-        score
-      };
+      // 只匹配以关键词开头的提示词
+      return lowercaseExprKeyword.startsWith(lowercaseKeyword);
     })
-    // 过滤掉分数为0的结果
-    .filter(item => item.score > 0)
-    // 按分数降序排序
-    .sort((a, b) => b.score - a.score)
-    // 提取推荐词并限制数量
-    .slice(0, 10)
-    .map(item => item.suggestion);
+    // 按表达式长度排序（更短的表达式通常更常用）
+    .sort((a, b) => {
+      const lenA = a.expression.length;
+      const lenB = b.expression.length;
+      return lenA - lenB;
+    })
+    // 限制数量
+    .slice(0, 10);
   }
   
   // 更新推荐词列表
@@ -709,90 +686,8 @@ function createPanel() {
       suggestions.removeEventListener('mouseleave', handleSuggestionsMouseLeave);
       suggestions.addEventListener('mouseleave', handleSuggestionsMouseLeave);
     } else if (inputValue.trim()) {
-      // 显示空状态
-      suggestions.innerHTML = '<div class="xpath-suggestion-empty">没有找到匹配的推荐词</div>';
-      suggestions.style.display = 'block';
-      
-      // 优化空状态弹窗位置，确保在输入框下方或上方且不被遮挡
-      const updateSuggestionPosition = () => {
-        const inputContainer = xpathInput.parentElement;
-        const inputRect = inputContainer.getBoundingClientRect();
-        const panelRect = panel.getBoundingClientRect();
-        
-        // 恢复默认最大高度
-        suggestions.style.maxHeight = '200px';
-        
-        // 重新获取弹窗尺寸（使用默认高度）
-        const suggestionsRect = suggestions.getBoundingClientRect();
-        
-        // 计算弹窗的默认位置（输入框下方）
-        let left = 0; // 相对于输入容器
-        let top = inputRect.height + 6;
-        let positionAbove = false;
-        
-        // 检查是否超出主窗口右侧边界
-        const panelRight = panelRect.left + panelRect.width;
-        const suggestionsRight = inputRect.left + left + suggestionsRect.width;
-        
-        if (suggestionsRight > panelRight) {
-          // 调整左侧位置，确保弹窗在主窗口内
-          left = panelRight - inputRect.left - suggestionsRect.width;
-        }
-        
-        // 检查是否超出主窗口底部边界
-        const panelBottom = panelRect.top + panelRect.height;
-        const suggestionsBottom = inputRect.top + top + suggestionsRect.height;
-        
-        if (suggestionsBottom > panelBottom) {
-          // 如果超出底部，尝试显示在输入框上方
-          const suggestionsTop = inputRect.top - suggestionsRect.height - 6;
-          
-          // 检查显示在上方是否超出主窗口顶部
-          if (suggestionsTop >= panelRect.top) {
-            // 可以显示在上方
-            positionAbove = true;
-            top = -suggestionsRect.height - 6;
-          } else {
-            // 上方也不够空间，限制最大高度
-            const maxHeight = panelBottom - inputRect.top - top - 10;
-            suggestions.style.maxHeight = `${Math.max(maxHeight, 60)}px`;
-          }
-        }
-        
-        // 检查是否超出屏幕右侧边界
-        if (inputRect.left + left + suggestionsRect.width > window.innerWidth) {
-          left = window.innerWidth - inputRect.left - suggestionsRect.width - 10;
-        }
-        
-        // 检查是否超出屏幕左侧边界
-        if (inputRect.left + left < 0) {
-          left = -inputRect.left + 10;
-        }
-        
-        // 设置弹窗位置
-        suggestions.style.left = `${left}px`;
-        suggestions.style.top = `${top}px`;
-      };
-      
-      // 初始定位
-      updateSuggestionPosition();
-      
-      // 监听窗口大小变化，重新定位
-      window.addEventListener('resize', updateSuggestionPosition);
-      
-      // 在弹窗关闭时移除事件监听
-      const removeResizeListener = () => {
-        window.removeEventListener('resize', updateSuggestionPosition);
-      };
-      
-      // 添加一次性事件监听器，在弹窗隐藏时移除resize监听
-      const hideListener = () => {
-        if (suggestions.style.display === 'none') {
-          removeResizeListener();
-          document.removeEventListener('click', hideListener);
-        }
-      };
-      document.addEventListener('click', hideListener);
+      // 当没有匹配到推荐词时，不显示弹窗
+      suggestions.style.display = 'none';
     } else {
       suggestions.style.display = 'none';
       // 清理tooltip
@@ -1017,6 +912,128 @@ function highlightElement(element) {
   element.classList.add(HIGHLIGHT_CLASS);
   element.classList.add(`level-${depth}`);
   highlightedElements.push(element);
+  
+  // 添加鼠标悬停事件，显示元素信息提示
+  element.addEventListener('mouseenter', showElementInfo);
+  element.addEventListener('mouseleave', hideElementInfo);
+}
+
+// 元素信息提示相关变量
+let elementInfoTooltip = null;
+let elementInfoTimer = null;
+
+// 显示元素信息提示
+function showElementInfo(e) {
+  // 清除之前的定时器
+  if (elementInfoTimer) {
+    clearTimeout(elementInfoTimer);
+  }
+  
+  // 延迟显示提示，避免快速移动鼠标时频繁创建
+  elementInfoTimer = setTimeout(() => {
+    const element = e.target;
+    const info = getElementInfo(element);
+    
+    // 创建提示框
+    elementInfoTooltip = document.createElement('div');
+    elementInfoTooltip.className = 'xpath-element-info';
+    
+    // 构建提示内容
+    let content = `
+      <div class="xpath-element-info-header">元素信息</div>
+      <div class="xpath-element-info-body">
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">标签名:</span>
+          <span class="xpath-element-info-value">${info.tagName}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">类名:</span>
+          <span class="xpath-element-info-value">${info.className || '-'}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">ID:</span>
+          <span class="xpath-element-info-value">${info.id || '-'}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">路径:</span>
+          <span class="xpath-element-info-value">${info.path}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">位置:</span>
+          <span class="xpath-element-info-value">${info.position}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">尺寸:</span>
+          <span class="xpath-element-info-value">${info.size}</span>
+        </div>
+        <div class="xpath-element-info-item">
+          <span class="xpath-element-info-label">可见性:</span>
+          <span class="xpath-element-info-value">${info.visible ? '可见' : '不可见'}</span>
+        </div>
+      </div>
+    `;
+    
+    elementInfoTooltip.innerHTML = content;
+    
+    // 添加到DOM
+    document.body.appendChild(elementInfoTooltip);
+    
+    // 定位提示框，避免超出屏幕
+    const rect = element.getBoundingClientRect();
+    const tooltipRect = elementInfoTooltip.getBoundingClientRect();
+    
+    let left = rect.right + 10;
+    let top = rect.top;
+    
+    // 如果提示框会超出屏幕右侧，调整位置到元素左侧
+    if (left + tooltipRect.width > window.innerWidth) {
+      left = rect.left - tooltipRect.width - 10;
+    }
+    
+    // 如果提示框会超出屏幕底部，调整位置
+    if (top + tooltipRect.height > window.innerHeight) {
+      top = window.innerHeight - tooltipRect.height - 10;
+    }
+    
+    // 确保不超出屏幕顶部
+    if (top < 0) {
+      top = 10;
+    }
+    
+    elementInfoTooltip.style.left = `${left}px`;
+    elementInfoTooltip.style.top = `${top}px`;
+  }, 500);
+}
+
+// 隐藏元素信息提示
+function hideElementInfo() {
+  // 清除定时器
+  if (elementInfoTimer) {
+    clearTimeout(elementInfoTimer);
+    elementInfoTimer = null;
+  }
+  
+  // 移除提示框
+  if (elementInfoTooltip && elementInfoTooltip.parentNode) {
+    elementInfoTooltip.remove();
+    elementInfoTooltip = null;
+  }
+}
+
+// 获取元素信息
+function getElementInfo(element) {
+  const rect = element.getBoundingClientRect();
+  const path = getElementAbsolutePath(element);
+  
+  return {
+    tagName: element.tagName.toLowerCase(),
+    className: element.className || '',
+    id: element.id || '',
+    path: path,
+    position: `X: ${Math.round(rect.left)}, Y: ${Math.round(rect.top)}`,
+    size: `W: ${Math.round(rect.width)}, H: ${Math.round(rect.height)}`,
+    visible: isElementVisible(element)
+  };
 }
 
 function isElementVisible(element) {
@@ -1171,27 +1188,57 @@ async function executeXPath() {
     resultInfo.textContent = `匹配到 ${totalCount} 个元素，其中可跳转/查看的元素 ${visibleElements.length} 个`;
 
     if (resultList) {
-      let html = '';
+      // 使用DocumentFragment批量创建结果项，减少DOM操作
+      const fragment = document.createDocumentFragment();
       
       for (let i = 0; i < visibleElements.length; i++) {
         const element = visibleElements[i];
         const text = element.textContent.trim() || '[空文本]';
-        html += `
-          <div class="xpath-result-item" data-index="${i}">
-            <div class="xpath-result-content">
-              <span class="xpath-result-number">${i + 1}.</span>
-              <div class="xpath-result-text-container">
-                <span class="xpath-result-text">${text}</span>
-              </div>
-            </div>
-            <button class="xpath-copy-btn" data-index="${i}" title="复制元素绝对路径">
-              📋
-            </button>
-          </div>
-        `;
+        
+        // 创建结果项元素
+        const item = document.createElement('div');
+        item.className = 'xpath-result-item';
+        item.dataset.index = i;
+        
+        // 创建内容容器
+        const content = document.createElement('div');
+        content.className = 'xpath-result-content';
+        
+        // 创建序号
+        const number = document.createElement('span');
+        number.className = 'xpath-result-number';
+        number.textContent = `${i + 1}.`;
+        
+        // 创建文本容器
+        const textContainer = document.createElement('div');
+        textContainer.className = 'xpath-result-text-container';
+        
+        // 创建文本
+        const textElement = document.createElement('span');
+        textElement.className = 'xpath-result-text';
+        textElement.textContent = text;
+        
+        // 创建复制按钮
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'xpath-copy-btn';
+        copyBtn.dataset.index = i;
+        copyBtn.title = '复制元素绝对路径';
+        copyBtn.textContent = '📋';
+        
+        // 组装元素
+        textContainer.appendChild(textElement);
+        content.appendChild(number);
+        content.appendChild(textContainer);
+        item.appendChild(content);
+        item.appendChild(copyBtn);
+        
+        // 添加到fragment
+        fragment.appendChild(item);
       }
       
-      resultList.innerHTML = html;
+      // 清空结果列表并添加fragment
+      resultList.innerHTML = '';
+      resultList.appendChild(fragment);
       
       // 检测文本是否超出容器宽度，根据需要添加滚动动画
       setTimeout(() => {
@@ -1232,10 +1279,19 @@ async function executeXPath() {
       }, 300);
     }
     
-    // 高亮所有可见匹配元素
-    visibleElements.forEach(element => {
+    // 限制高亮元素数量，避免整个屏幕布满高亮效果
+    const MAX_HIGHLIGHTS = 50;
+    const elementsToHighlight = visibleElements.slice(0, MAX_HIGHLIGHTS);
+    
+    // 高亮元素
+    elementsToHighlight.forEach(element => {
       highlightElement(element);
     });
+    
+    // 如果元素数量超过限制，更新结果提示
+    if (visibleElements.length > MAX_HIGHLIGHTS) {
+      resultInfo.textContent = `匹配到 ${totalCount} 个元素，其中可跳转/查看的元素 ${visibleElements.length} 个（仅高亮前 ${MAX_HIGHLIGHTS} 个）`;
+    }
     
     // 验证xpath路径是否能匹配到指定元素
     function isXPathValidForElement(xpath, element) {
@@ -1299,14 +1355,30 @@ async function executeXPath() {
       });
     }
     
-    // 为结果项添加点击事件，点击时滚动到对应元素
-    resultList.querySelectorAll('.xpath-result-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        // 如果点击的是复制按钮，不执行滚动操作
-        if (e.target.classList.contains('xpath-copy-btn')) {
-          return;
-        }
+    // 使用事件委托为结果项添加点击事件，减少事件监听器数量
+    resultList.addEventListener('click', (e) => {
+      // 处理复制按钮点击
+      if (e.target.classList.contains('xpath-copy-btn')) {
+        const index = parseInt(e.target.dataset.index);
+        const element = visibleElements[index];
+        const absolutePath = getElementAbsolutePath(element);
         
+        copyToClipboard(absolutePath).then(success => {
+          if (success) {
+            // 显示复制成功提示
+            const originalText = e.target.textContent;
+            e.target.textContent = '✅';
+            setTimeout(() => {
+              e.target.textContent = originalText;
+            }, 1000);
+          }
+        });
+        return;
+      }
+      
+      // 处理结果项点击
+      const item = e.target.closest('.xpath-result-item');
+      if (item) {
         const index = parseInt(item.dataset.index);
         const element = visibleElements[index];
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1344,84 +1416,94 @@ async function executeXPath() {
             }
           }
         }, 100);
-      });
-      
-      // 添加鼠标悬停显示完整文本功能
-      let tooltip = null;
-      
-      item.addEventListener('mouseenter', (e) => {
-        // 复制按钮不显示文本弹窗
-        if (e.target.classList.contains('xpath-copy-btn')) {
-          return;
-        }
-        
-        const index = parseInt(item.dataset.index);
-        const element = visibleElements[index];
-        const fullText = element.textContent.trim() || '[空文本]';
-        
-        // 只有当文本被截断时才显示弹窗
-        if (item.scrollWidth > item.clientWidth) {
-          tooltip = document.createElement('div');
-          tooltip.className = 'xpath-tooltip';
-          tooltip.textContent = fullText;
-          
-          // 先添加到DOM，再计算尺寸和位置
-          document.body.appendChild(tooltip);
-          
-          // 定位弹窗，避免超出屏幕
-          const rect = item.getBoundingClientRect();
-          const tooltipRect = tooltip.getBoundingClientRect();
-          
-          let left = rect.left;
-          let top = rect.bottom + 5;
-          
-          // 如果弹窗会超出屏幕右侧，调整位置
-          if (left + tooltipRect.width > window.innerWidth) {
-            left = window.innerWidth - tooltipRect.width - 10;
-          }
-          
-          // 如果弹窗会超出屏幕底部，调整位置到元素上方
-          if (top + tooltipRect.height > window.innerHeight) {
-            top = rect.top - tooltipRect.height - 5;
-          }
-          
-          // 确保不超出屏幕顶部
-          if (top < 0) {
-            top = 10;
-          }
-          
-          tooltip.style.left = `${left}px`;
-          tooltip.style.top = `${top}px`;
-        }
-      });
-      
-      item.addEventListener('mouseleave', () => {
-        if (tooltip && tooltip.parentNode) {
-          tooltip.remove();
-          tooltip = null;
-        }
-      });
+      }
     });
     
-    // 为复制按钮添加点击事件
-    resultList.querySelectorAll('.xpath-copy-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡到结果项
-        const index = parseInt(btn.dataset.index);
-        const element = visibleElements[index];
-        const absolutePath = getElementAbsolutePath(element);
+    // 使用事件委托添加鼠标悬停显示完整文本功能
+    let tooltip = null;
+    let tooltipTimer = null;
+    let currentItem = null;
+    
+    resultList.addEventListener('mouseenter', (e) => {
+      // 复制按钮不显示文本弹窗
+      if (e.target.classList.contains('xpath-copy-btn')) {
+        return;
+      }
+      
+      const item = e.target.closest('.xpath-result-item');
+      if (item) {
+        // 清除之前的定时器
+        if (tooltipTimer) {
+          clearTimeout(tooltipTimer);
+        }
         
-        copyToClipboard(absolutePath).then(success => {
-          if (success) {
-            // 显示复制成功提示
-            const originalText = btn.textContent;
-            btn.textContent = '✅';
-            setTimeout(() => {
-              btn.textContent = originalText;
-            }, 1000);
+        currentItem = item;
+        
+        // 延迟显示tooltip，避免快速移动鼠标时频繁创建
+        tooltipTimer = setTimeout(() => {
+          const index = parseInt(item.dataset.index);
+          const element = visibleElements[index];
+          const fullText = element.textContent.trim() || '[空文本]';
+          
+          // 只有当文本被截断时才显示弹窗
+          if (item.scrollWidth > item.clientWidth) {
+            tooltip = document.createElement('div');
+            tooltip.className = 'xpath-tooltip';
+            tooltip.textContent = fullText;
+            
+            // 先添加到DOM，再计算尺寸和位置
+            document.body.appendChild(tooltip);
+            
+            // 定位弹窗，避免超出屏幕
+            const rect = item.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let left = rect.left;
+            let top = rect.bottom + 5;
+            
+            // 如果弹窗会超出屏幕右侧，调整位置
+            if (left + tooltipRect.width > window.innerWidth) {
+              left = window.innerWidth - tooltipRect.width - 10;
+            }
+            
+            // 如果弹窗会超出屏幕底部，调整位置到元素上方
+            if (top + tooltipRect.height > window.innerHeight) {
+              top = rect.top - tooltipRect.height - 5;
+            }
+            
+            // 确保不超出屏幕顶部
+            if (top < 0) {
+              top = 10;
+            }
+            
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
           }
-        });
-      });
+        }, 300);
+      }
+    });
+    
+    resultList.addEventListener('mouseleave', (e) => {
+      // 检查鼠标是否移动到了另一个结果项
+      const nextItem = e.relatedTarget?.closest('.xpath-result-item');
+      if (nextItem && nextItem !== currentItem) {
+        currentItem = nextItem;
+        return;
+      }
+      
+      // 清除定时器
+      if (tooltipTimer) {
+        clearTimeout(tooltipTimer);
+        tooltipTimer = null;
+      }
+      
+      // 移除tooltip
+      if (tooltip && tooltip.parentNode) {
+        tooltip.remove();
+        tooltip = null;
+      }
+      
+      currentItem = null;
     });
     
   } catch (error) {
