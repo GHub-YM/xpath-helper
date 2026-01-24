@@ -1,0 +1,88 @@
+{
+  "manifest_version": 3,
+  "name": "XPath Helper",
+  "version": "1.0.2",
+  "description": "为开发者和测试人员提供的XPath便捷查看定位的工具",
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "xpath元素定位辅助"
+  },
+  "icons": {
+    "128": "icons/icon128.png",
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "32": "icons/icon32.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*",
+        "*://*/*",
+        "file:///*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "host_permissions": [
+    "*://*/*",
+    "file:///*"
+  ],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "declarativeContent"
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "*://*/*",
+        "file:///*"
+      ],
+      "resources": [
+        "iframe.html"
+      ]
+    },
+    {
+      "matches": [
+        "*://*/*",
+        "file:///*"
+      ],
+      "resources": [
+        "js/*"
+      ]
+    },
+    {
+      "matches": [
+        "*://*/*",
+        "file:///*"
+      ],
+      "resources": [
+        "css/*"
+      ]
+    },
+    {
+      "matches": [
+        "*://*/*",
+        "file:///*"
+      ],
+      "resources": [
+        "assets/*"
+      ]
+    }
+  ]
+}
