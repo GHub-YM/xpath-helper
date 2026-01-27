@@ -5,6 +5,7 @@ const HIGHLIGHT_CLASS = 'xpath-highlight';
 function clearHighlights() {
   highlightedElements.forEach(element => {
     element.classList.remove(HIGHLIGHT_CLASS);
+    element.classList.remove('xpath-highlight-active');
     // 移除所有层级类
     for (let i = 0; i < 6; i++) {
       element.classList.remove(`level-${i}`);
@@ -33,15 +34,21 @@ function createPanel() {
   panel.className = 'xpath-panel';
   panel.innerHTML = `
     <div class="xpath-panel-header">
-        <h3>XPath Helper</h3>
         <div class="xpath-header-buttons">
           <button class="xpath-close-btn">×</button>
+          <button id="xpath-search-btn">🔍</button>
+          <div id="xpath-search-popup" class="xpath-search-popup">
+            <label class="xpath-switch">
+              <input type="checkbox" id="xpath-real-time" checked>
+              <span class="xpath-slider"></span>
+            </label>
+            <span class="xpath-switch-label">实时查询</span>
+          </div>
         </div>
-      </div>
+    </div>
     <div class="xpath-panel-content">
       <div class="xpath-main-content">
         <div class="xpath-left">
-          <h4>路径查询输入框:</h4>
           <div class="xpath-input-container">
             <textarea id="xpath-input" placeholder="输入或粘贴XPath路径"></textarea>
             <div id="xpath-suggestions" class="xpath-suggestions"></div>
@@ -49,25 +56,34 @@ function createPanel() {
           <div class="xpath-result-info"></div>
         </div>
         <div class="xpath-right">
-          <h4>查询结果展示 (可见元素)</h4>
           <div class="xpath-result-list"></div>
-        </div>
-      </div>
-      <div class="xpath-options">
-        <div class="xpath-options-left">
-          <label class="xpath-switch">
-            <input type="checkbox" id="xpath-real-time" checked>
-            <span class="xpath-slider"></span>
-          </label>
-          <span class="xpath-switch-label">实时查询</span>
-        </div>
-        <div class="xpath-options-right">
-          <button id="xpath-search-btn" style="display: none;">查询</button>
         </div>
       </div>
     </div>
   `;
   document.body.appendChild(panel);
+
+  // 默认隐藏右侧的查询结果展示面板
+  const xpathRight = panel.querySelector('.xpath-right');
+  if (xpathRight) {
+    xpathRight.style.display = 'none';
+  }
+  
+  // 默认设置左侧面板占据整个面板宽度
+  const xpathLeft = panel.querySelector('.xpath-left');
+  if (xpathLeft) {
+    xpathLeft.style.flex = '1';
+    xpathLeft.style.width = '100%';
+  }
+  
+  // 默认设置整个面板宽度为240px，与两个窗口同时出现时输入窗口的宽度一致
+  panel.style.width = '240px';
+  
+  // 默认设置查询结果提示文本框的初始提示文本
+  const resultInfo = panel.querySelector('.xpath-result-info');
+  if (resultInfo) {
+    resultInfo.textContent = '请输入XPath路径';
+  }
 
   // 添加拖拽功能
   let isDragging = false;
@@ -158,6 +174,11 @@ function createPanel() {
     panel.style.left = `${newLeft}px`;
     panel.style.top = `${newTop}px`;
     panel.style.transform = 'none';
+    
+    // 面板移动时更新完整路径显示框的位置
+    if (window.fullPathDisplay) {
+      window.positionFullPathDisplay();
+    }
   }
   
   function handleMouseUp() {
@@ -175,7 +196,121 @@ function createPanel() {
   // 添加事件监听
   const closeBtn = panel.querySelector('.xpath-close-btn');
   const searchBtn = panel.querySelector('#xpath-search-btn');
-  const xpathInput = panel.querySelector('#xpath-input');
+  // 设置全局变量
+  window.xpathInput = panel.querySelector('#xpath-input');
+  
+  // 全局变量
+window.fullPathDisplay = null; // 完整路径显示框元素
+window.panel = panel; // 插件面板
+
+// 定位完整路径显示框
+window.positionFullPathDisplay = function() {
+  if (!window.fullPathDisplay) return;
+  
+  // 获取大窗口（面板）的位置
+  if (!panel) return;
+  
+  // 检查输入框是否为空
+  if (window.xpathInput) {
+    const inputValue = window.xpathInput.value;
+    if (inputValue.trim() === '') {
+      // 输入框为空，隐藏完整路径显示框
+      window.fullPathDisplay.style.display = 'none';
+      window.fullPathDisplay.style.visibility = 'hidden';
+      window.fullPathDisplay.style.opacity = '0';
+      return;
+    }
+  }
+  
+  // 确保完整路径显示框的内容是最新的
+  if (window.xpathInput) {
+    window.fullPathDisplay.textContent = window.xpathInput.value;
+  }
+  
+  // 强制浏览器重排，确保获取到最新的面板尺寸
+  panel.offsetWidth;
+  
+  // 强制浏览器重排，确保获取到最新的显示框尺寸
+  window.fullPathDisplay.offsetWidth;
+  
+  const panelRect = panel.getBoundingClientRect();
+  
+  // 获取完整路径显示框的尺寸
+  const displayRect = window.fullPathDisplay.getBoundingClientRect();
+  
+  // 计算显示框的位置（大窗口正下方）
+  let left = panelRect.left + (panelRect.width - displayRect.width) / 2; // 相对于屏幕，水平居中
+  let top = panelRect.bottom + 6; // 相对于屏幕，大窗口下方
+  
+  // 检查是否超出屏幕右侧边界
+  if (left + displayRect.width > window.innerWidth) {
+    left = window.innerWidth - displayRect.width - 10;
+  }
+  
+  // 检查是否超出屏幕底部边界
+  if (top + displayRect.height > window.innerHeight) {
+    // 如果超出底部，尝试显示在大窗口上方
+    const displayTop = panelRect.top - displayRect.height - 6;
+    
+    // 检查显示在上方是否超出屏幕顶部
+    if (displayTop >= 0) {
+      top = displayTop;
+    } else {
+      // 上方也不够空间，限制最大宽度
+      window.fullPathDisplay.style.maxWidth = `${window.innerWidth - 20}px`;
+      // 重新计算位置
+      left = 10;
+      top = 10;
+    }
+  } else {
+    // 恢复最大宽度
+    window.fullPathDisplay.style.maxWidth = 'none';
+  }
+  
+  // 检查是否超出屏幕左侧边界
+  if (left < 0) {
+    left = 10;
+  }
+  
+  // 检查是否超出屏幕顶部边界
+  if (top < 0) {
+    top = 10;
+  }
+  
+  // 设置显示框位置
+  window.fullPathDisplay.style.left = `${left}px`;
+  window.fullPathDisplay.style.top = `${top}px`;
+  
+  // 确保显示框的z-index高于面板，避免被遮挡
+  window.fullPathDisplay.style.zIndex = '99999';
+  
+  // 确保显示框可见
+  window.fullPathDisplay.style.display = 'block';
+  window.fullPathDisplay.style.visibility = 'visible';
+  window.fullPathDisplay.style.opacity = '1';
+};
+
+// 更新完整路径显示框的内容和位置
+window.updateFullPathDisplay = function() {
+  if (!window.fullPathDisplay) return;
+  
+  // 检查输入框是否为空
+  if (window.xpathInput) {
+    const inputValue = window.xpathInput.value;
+    if (inputValue.trim() === '') {
+      // 输入框为空，隐藏完整路径显示框
+      window.fullPathDisplay.style.display = 'none';
+      window.fullPathDisplay.style.visibility = 'hidden';
+      window.fullPathDisplay.style.opacity = '0';
+      return;
+    } else {
+      // 输入框不为空，更新内容
+      window.fullPathDisplay.textContent = inputValue;
+      // 重新定位
+      window.positionFullPathDisplay();
+    }
+  }
+};
   
   closeBtn.addEventListener('click', (e) => {
     e.stopPropagation(); // 阻止事件冒泡到面板
@@ -190,6 +325,44 @@ function createPanel() {
     });
   });
   
+  // 初始化完整路径显示框并一直启用
+  function initFullPathDisplay() {
+    // 创建完整路径显示框
+    window.fullPathDisplay = document.createElement('div');
+    window.fullPathDisplay.id = 'xpath-full-path-display';
+    window.fullPathDisplay.className = 'xpath-full-path-display';
+    document.body.appendChild(window.fullPathDisplay);
+    
+    // 更新完整路径显示框的内容
+    window.fullPathDisplay.textContent = window.xpathInput.value;
+    
+    // 检查输入框是否为空
+    const inputValue = window.xpathInput.value;
+    if (inputValue.trim() === '') {
+      // 输入框为空，隐藏完整路径显示框
+      window.fullPathDisplay.style.display = 'none';
+      window.fullPathDisplay.style.visibility = 'hidden';
+      window.fullPathDisplay.style.opacity = '0';
+    } else {
+      // 输入框不为空，显示完整路径显示框
+      window.fullPathDisplay.style.display = 'block';
+      window.fullPathDisplay.style.visibility = 'visible';
+      window.fullPathDisplay.style.opacity = '1';
+    }
+    
+    // 定位完整路径显示框
+    window.positionFullPathDisplay();
+    
+    // 监听窗口大小变化，重新定位
+    window.addEventListener('resize', window.positionFullPathDisplay);
+    
+    // 监听输入框内容变化，更新显示框内容和位置
+    window.xpathInput.addEventListener('input', window.updateFullPathDisplay);
+  }
+  
+  // 初始化完整路径显示功能
+  initFullPathDisplay();
+  
   // 为结果项中的复制按钮添加mousedown事件，阻止触发面板的拖拽
   const resultList = panel.querySelector('.xpath-result-list');
   if (resultList) {
@@ -198,6 +371,102 @@ function createPanel() {
       if (e.target.classList.contains('xpath-copy-btn')) {
         e.stopPropagation(); // 阻止事件冒泡到面板
         clearTimeout(dragStartTimeout); // 清除拖拽启动定时器
+      }
+    });
+  }
+  
+  // 定位查询按钮弹窗
+  function positionSearchPopup() {
+    const searchPopup = panel.querySelector('#xpath-search-popup');
+    if (!searchPopup || !searchBtn || !panel) return;
+    
+    const panelRect = panel.getBoundingClientRect();
+    const popupHeight = searchPopup.offsetHeight || 40;
+    const popupWidth = 120; // 假设弹窗宽度为120px
+    
+    // 计算弹窗位置：显示在大窗口上方，与大窗口左对齐，不重叠
+    let left = panelRect.left; // 与大窗口左对齐
+    let top = panelRect.top - popupHeight - 10; // 大窗口上方10px，确保不重叠
+    
+    // 检查是否超出屏幕右侧边界
+    if (left + popupWidth > window.innerWidth) {
+      left = window.innerWidth - popupWidth - 10;
+    }
+    
+    // 检查是否超出屏幕左侧边界
+    if (left < 10) {
+      left = 10;
+    }
+    
+    // 检查是否超出屏幕顶部边界
+    if (top < 10) {
+      // 如果上方不够空间，显示在大窗口下方
+      top = panelRect.bottom + 10; // 大窗口下方10px，确保不重叠
+    }
+    
+    searchPopup.style.left = `${left}px`;
+    searchPopup.style.top = `${top}px`;
+    
+    // 为弹窗添加边框圆角，与大窗口一致
+    searchPopup.style.borderRadius = '10px';
+  }
+  
+  // 鼠标悬停时定位弹窗
+  searchBtn.addEventListener('mouseenter', () => {
+    positionSearchPopup();
+  });
+  
+  // 管理弹窗显示和隐藏的状态
+  let popupTimeout = null;
+  const searchPopup = panel.querySelector('#xpath-search-popup');
+  
+  // 搜索按钮鼠标进入
+  searchBtn.addEventListener('mouseenter', () => {
+    clearTimeout(popupTimeout);
+    positionSearchPopup();
+    // 显示弹窗
+    if (searchPopup) {
+      searchPopup.style.opacity = '1';
+      searchPopup.style.visibility = 'visible';
+      searchPopup.style.pointerEvents = 'auto';
+    }
+  });
+  
+  // 搜索按钮鼠标离开
+  searchBtn.addEventListener('mouseleave', (e) => {
+    // 检查鼠标是否移动到弹窗上
+    const target = e.relatedTarget;
+    if (!target || !target.closest('#xpath-search-popup')) {
+      popupTimeout = setTimeout(() => {
+        if (searchPopup) {
+          searchPopup.style.opacity = '0';
+          searchPopup.style.visibility = 'hidden';
+          searchPopup.style.pointerEvents = 'none';
+        }
+      }, 200); // 200ms延迟，允许鼠标移动到弹窗
+    }
+  });
+  
+  // 弹窗鼠标进入
+  if (searchPopup) {
+    searchPopup.addEventListener('mouseenter', () => {
+      clearTimeout(popupTimeout);
+      // 保持弹窗显示
+      searchPopup.style.opacity = '1';
+      searchPopup.style.visibility = 'visible';
+      searchPopup.style.pointerEvents = 'auto';
+    });
+    
+    // 弹窗鼠标离开
+    searchPopup.addEventListener('mouseleave', (e) => {
+      // 检查鼠标是否移动到搜索按钮上
+      const target = e.relatedTarget;
+      if (!target || !target.closest('#xpath-search-btn')) {
+        popupTimeout = setTimeout(() => {
+          searchPopup.style.opacity = '0';
+          searchPopup.style.visibility = 'hidden';
+          searchPopup.style.pointerEvents = 'none';
+        }, 200); // 200ms延迟，允许鼠标移动回搜索按钮
       }
     });
   }
@@ -213,13 +482,10 @@ function createPanel() {
   const realTimeSwitch = panel.querySelector('#xpath-real-time');
   
   realTimeSwitch.addEventListener('change', () => {
-    const localSearchBtn = panel.querySelector('#xpath-search-btn');
     if (realTimeSwitch.checked) {
-      localSearchBtn.style.display = 'none';
       // 实时查询
       executeXPath();
     } else {
-      localSearchBtn.style.display = 'block';
       // 关闭实时查询时清除高亮
       clearHighlights();
     }
@@ -888,6 +1154,12 @@ function togglePanel() {
     panel.remove();
     panel = null;
     clearHighlights();
+    
+    // 面板关闭时移除完整路径显示框
+    if (window.fullPathDisplay && window.fullPathDisplay.parentNode) {
+      window.fullPathDisplay.remove();
+      window.fullPathDisplay = null;
+    }
   } else {
     createPanel();
   }
@@ -916,6 +1188,24 @@ function highlightElement(element) {
   // 添加鼠标悬停事件，显示元素信息提示
   element.addEventListener('mouseenter', showElementInfo);
   element.addEventListener('mouseleave', hideElementInfo);
+}
+
+// 激活元素，添加内部黄色脉冲效果
+function activateElement(element) {
+  // 首先清除所有其他元素的激活状态
+  highlightedElements.forEach(el => {
+    el.classList.remove('xpath-highlight-active');
+  });
+  
+  // 添加激活状态到当前元素
+  element.classList.add('xpath-highlight-active');
+  
+  // 3秒后自动移除激活状态，使黄色脉冲效果消失
+  setTimeout(() => {
+    if (element.classList.contains('xpath-highlight-active')) {
+      element.classList.remove('xpath-highlight-active');
+    }
+  }, 3000);
 }
 
 // 元素信息提示相关变量
@@ -1170,6 +1460,27 @@ async function executeXPath() {
     if (resultList) {
       resultList.innerHTML = '';
     }
+    // 隐藏右侧的查询结果展示面板
+    const xpathRight = panel.querySelector('.xpath-right');
+    if (xpathRight) {
+      xpathRight.style.display = 'none';
+    }
+    // 当用户不输入路径时，设置左侧面板占据整个面板宽度
+    const xpathLeft = panel.querySelector('.xpath-left');
+    if (xpathLeft) {
+      xpathLeft.style.flex = '1';
+      xpathLeft.style.width = '100%';
+    }
+    // 当用户不输入路径时，设置整个面板宽度为240px，与两个窗口同时出现时输入窗口的宽度一致
+    panel.style.width = '240px';
+    
+    // 当用户不输入路径时，隐藏完整路径显示框
+    if (window.fullPathDisplay) {
+      window.fullPathDisplay.style.display = 'none';
+      window.fullPathDisplay.style.visibility = 'hidden';
+      window.fullPathDisplay.style.opacity = '0';
+    }
+    
     return;
   }
 
@@ -1184,114 +1495,343 @@ async function executeXPath() {
     // 过滤出可跳转/查看的元素
     const visibleElements = allMatchedElements.filter(isElementVisible);
     
+    // 获取结果标题元素和右侧面板
+    const resultTitle = panel.querySelector('.xpath-right h4');
+    const resultList = panel.querySelector('.xpath-result-list');
+    const xpathRight = panel.querySelector('.xpath-right');
+    
     // 更新结果提示
     resultInfo.textContent = `匹配到 ${totalCount} 个元素，其中可跳转/查看的元素 ${visibleElements.length} 个`;
 
-    if (resultList) {
-      // 使用DocumentFragment批量创建结果项，减少DOM操作
-      const fragment = document.createDocumentFragment();
+    if (xpathRight && resultList) {
+      // 获取左侧面板
+      const xpathLeft = panel.querySelector('.xpath-left');
       
-      for (let i = 0; i < visibleElements.length; i++) {
-        const element = visibleElements[i];
-        const text = element.textContent.trim() || '[空文本]';
+      // 检查是否有可见元素
+      if (visibleElements.length === 0) {
+        // 隐藏查询结果展示相关UI
+        xpathRight.style.display = 'none';
+        // 当右侧面板隐藏时，设置左侧面板占据整个面板宽度
+        if (xpathLeft) {
+          xpathLeft.style.flex = '1';
+          xpathLeft.style.width = '100%';
+        }
+        // 当右侧面板隐藏时，设置整个面板宽度为240px，与两个窗口同时出现时输入窗口的宽度一致
+        panel.style.width = '240px';
         
-        // 创建结果项元素
-        const item = document.createElement('div');
-        item.className = 'xpath-result-item';
-        item.dataset.index = i;
+        // 检查输入框是否为空
+        if (inputValue.trim() !== '') {
+          // 更新完整路径显示框的内容并重新定位它
+          if (window.fullPathDisplay) {
+            // 更新完整路径显示框的内容
+            window.fullPathDisplay.textContent = inputValue;
+            // 重新定位显示框
+            window.positionFullPathDisplay();
+          }
+        }
+      } else {
+        // 显示查询结果展示相关UI
+        xpathRight.style.display = 'flex';
+        // 当右侧面板显示时，恢复左侧面板的flex: 1属性
+        if (xpathLeft) {
+          xpathLeft.style.flex = '1';
+          xpathLeft.style.width = 'auto';
+        }
+        // 当右侧面板显示时，恢复整个面板宽度为480px，与两个窗口同时出现时的宽度一致
+        panel.style.width = '480px';
         
-        // 创建内容容器
-        const content = document.createElement('div');
-        content.className = 'xpath-result-content';
+        // 检查输入框是否为空
+        if (inputValue.trim() !== '') {
+          // 立即更新完整路径显示框的位置，确保它能正确适应面板宽度的变化
+          if (window.fullPathDisplay) {
+            // 更新完整路径显示框的内容
+            window.fullPathDisplay.textContent = inputValue;
+            // 重新定位显示框
+            window.positionFullPathDisplay();
+          }
+        }
         
-        // 创建序号
-        const number = document.createElement('span');
-        number.className = 'xpath-result-number';
-        number.textContent = `${i + 1}.`;
+        // 为每个可见元素添加高亮
+        visibleElements.forEach(element => {
+          highlightElement(element);
+        });
         
-        // 创建文本容器
-        const textContainer = document.createElement('div');
-        textContainer.className = 'xpath-result-text-container';
+        // 使用DocumentFragment批量创建结果项，减少DOM操作
+        const fragment = document.createDocumentFragment();
         
-        // 创建文本
-        const textElement = document.createElement('span');
-        textElement.className = 'xpath-result-text';
-        textElement.textContent = text;
-        
-        // 创建复制按钮
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'xpath-copy-btn';
-        copyBtn.dataset.index = i;
-        copyBtn.title = '复制元素绝对路径';
-        copyBtn.textContent = '📋';
-        
-        // 组装元素
-        textContainer.appendChild(textElement);
-        content.appendChild(number);
-        content.appendChild(textContainer);
-        item.appendChild(content);
-        item.appendChild(copyBtn);
-        
-        // 添加到fragment
-        fragment.appendChild(item);
-      }
-      
-      // 清空结果列表并添加fragment
-      resultList.innerHTML = '';
-      resultList.appendChild(fragment);
-      
-      // 检测文本是否超出容器宽度，根据需要添加滚动动画
-      setTimeout(() => {
-        resultList.querySelectorAll('.xpath-result-item').forEach(item => {
-          const container = item.querySelector('.xpath-result-text-container');
-          const text = item.querySelector('.xpath-result-text');
+        for (let i = 0; i < visibleElements.length; i++) {
+          const element = visibleElements[i];
+          const text = element.textContent.trim() || '[空文本]';
           
-          if (container && text) {
-            // 确保容器有正确的样式
-            container.style.position = 'relative';
-            container.style.overflow = 'hidden';
-            
-            // 强制计算布局
-            text.style.display = 'inline-block';
-            const textWidth = text.scrollWidth;
-            const containerWidth = container.clientWidth;
-            
-            // 检查文本是否超出容器宽度
-            if (textWidth > containerWidth) {
-              // 文本超出，添加滚动动画和绝对定位
-              text.style.position = 'absolute';
-              // 根据文本长度动态计算动画持续时间，确保滚动速度统一
-              const scrollDistance = textWidth + containerWidth;
-              const scrollSpeed = 50; // 固定速度：50像素/秒
-              const animationDuration = Math.max(5, Math.round(scrollDistance / scrollSpeed));
-              text.style.animation = `xpath-text-scroll ${animationDuration}s linear infinite`;
-              text.style.animationIterationCount = 'infinite';
-              text.style.whiteSpace = 'nowrap';
-              text.style.display = 'inline-block';
-            } else {
-              // 文本未超出，移除滚动动画和绝对定位
-              text.style.animation = 'none';
-              text.style.transform = 'none';
-              text.style.position = 'static';
+          // 创建结果项元素
+          const item = document.createElement('div');
+          item.className = 'xpath-result-item';
+          item.dataset.index = i;
+          
+          // 创建内容容器
+          const content = document.createElement('div');
+          content.className = 'xpath-result-content';
+          
+          // 创建序号
+          const number = document.createElement('span');
+          number.className = 'xpath-result-number';
+          number.textContent = `${i + 1}.`;
+          
+          // 创建文本容器
+          const textContainer = document.createElement('div');
+          textContainer.className = 'xpath-result-text-container';
+          
+          // 创建文本
+          const textElement = document.createElement('span');
+          textElement.className = 'xpath-result-text';
+          textElement.textContent = text;
+          
+          // 创建复制按钮
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'xpath-copy-btn';
+          copyBtn.dataset.index = i;
+          copyBtn.title = '复制元素绝对路径';
+          copyBtn.textContent = '📋';
+          
+          // 组装元素
+          textContainer.appendChild(textElement);
+          content.appendChild(number);
+          content.appendChild(textContainer);
+          item.appendChild(content);
+          item.appendChild(copyBtn);
+          
+          // 添加到fragment
+          fragment.appendChild(item);
+        }
+        
+        // 清空结果列表并添加fragment
+        resultList.innerHTML = '';
+        resultList.appendChild(fragment);
+        
+        // 立即更新完整路径显示框的内容并重新定位它，确保在添加完所有结果项后显示框可见
+        setTimeout(() => {
+          // 检查输入框是否为空
+          if (inputValue.trim() !== '') {
+            if (window.fullPathDisplay) {
+              // 更新完整路径显示框的内容
+              window.fullPathDisplay.textContent = inputValue;
+              // 重新定位显示框
+              window.positionFullPathDisplay();
             }
           }
+        }, 50);
+        
+        // 检测文本是否超出容器宽度，根据需要添加滚动动画
+        setTimeout(() => {
+          resultList.querySelectorAll('.xpath-result-item').forEach(item => {
+            const container = item.querySelector('.xpath-result-text-container');
+            const text = item.querySelector('.xpath-result-text');
+            
+            if (container && text) {
+              // 确保容器有正确的样式
+              container.style.position = 'relative';
+              container.style.overflow = 'hidden';
+              
+              // 强制计算布局
+              text.style.display = 'inline-block';
+              const textWidth = text.scrollWidth;
+              const containerWidth = container.clientWidth;
+              
+              // 检查文本是否超出容器宽度
+              if (textWidth > containerWidth) {
+                // 文本超出，添加滚动动画和绝对定位
+                text.style.position = 'absolute';
+                // 根据文本长度动态计算动画持续时间，确保滚动速度统一
+                const scrollDistance = textWidth + containerWidth;
+                const scrollSpeed = 50; // 固定速度：50像素/秒
+                const animationDuration = Math.max(5, Math.round(scrollDistance / scrollSpeed));
+                text.style.animation = `xpath-text-scroll ${animationDuration}s linear infinite`;
+                text.style.animationIterationCount = 'infinite';
+                text.style.whiteSpace = 'nowrap';
+                text.style.display = 'inline-block';
+              } else {
+                // 文本未超出，移除滚动动画和绝对定位
+                text.style.animation = 'none';
+                text.style.transform = 'none';
+                text.style.position = 'static';
+              }
+            }
+          });
+          
+          // 再次更新完整路径显示框的内容并重新定位它，确保浏览器有足够的时间处理所有DOM操作
+          setTimeout(() => {
+            // 检查输入框是否为空
+            if (inputValue.trim() !== '') {
+              if (window.fullPathDisplay) {
+                // 更新完整路径显示框的内容
+                window.fullPathDisplay.textContent = inputValue;
+                // 重新定位显示框
+                window.positionFullPathDisplay();
+              }
+            }
+          }, 200);
+        }, 300);
+        
+        // 使用事件委托为结果项添加点击事件，减少事件监听器数量
+        resultList.addEventListener('click', (e) => {
+          // 处理复制按钮点击
+          if (e.target.classList.contains('xpath-copy-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            const element = visibleElements[index];
+            const absolutePath = getElementAbsolutePath(element);
+            
+            copyToClipboard(absolutePath).then(success => {
+              if (success) {
+                // 显示复制成功提示
+                const originalText = e.target.textContent;
+                e.target.textContent = '✅';
+                setTimeout(() => {
+                  e.target.textContent = originalText;
+                }, 1000);
+              }
+            });
+            return;
+          }
+          
+          // 处理结果项点击
+          const item = e.target.closest('.xpath-result-item');
+          if (item) {
+            const index = parseInt(item.dataset.index);
+            const element = visibleElements[index];
+            // 取消自动移动到元素位置的效果
+            // element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+            // 临时增强高亮效果
+            element.classList.remove(HIGHLIGHT_CLASS);
+            for (let i = 0; i < 6; i++) {
+              element.classList.remove(`level-${i}`);
+            }
+            setTimeout(() => {
+              highlightElement(element);
+              // 添加内部黄色脉冲效果
+              activateElement(element);
+              // 获取当前实时查询状态和输入框内容
+              const isRealTimeEnabled = panel.querySelector('#xpath-real-time').checked;
+              const xpathInput = panel.querySelector('#xpath-input');
+              const xpath = xpathInput.value.trim();
+              
+              // 只有当实时查询关闭时，才考虑自动移除高亮
+              if (!isRealTimeEnabled) {
+                // 检查xpath路径是否有效且能匹配到当前元素
+                const isXPathValid = xpath && isXPathValidForElement(xpath, element);
+                
+                // 如果xpath路径无效或不能匹配到当前元素，3秒后自动移除高亮
+                if (!isXPathValid) {
+                  setTimeout(() => {
+                    element.classList.remove(HIGHLIGHT_CLASS);
+                    // 移除所有层级类
+                    for (let i = 0; i < 6; i++) {
+                      element.classList.remove(`level-${i}`);
+                    }
+                    // 从高亮元素数组中移除
+                    const elementIndex = highlightedElements.indexOf(element);
+                    if (elementIndex > -1) {
+                      highlightedElements.splice(elementIndex, 1);
+                    }
+                  }, 3000);
+                }
+              }
+            }, 100);
+          }
         });
-      }, 300);
+        
+        // 使用事件委托添加鼠标悬停显示完整文本功能
+        let tooltip = null;
+        let tooltipTimer = null;
+        let currentItem = null;
+        
+        resultList.addEventListener('mouseenter', (e) => {
+          // 复制按钮不显示文本弹窗
+          if (e.target.classList.contains('xpath-copy-btn')) {
+            return;
+          }
+          
+          const item = e.target.closest('.xpath-result-item');
+          if (item) {
+            // 清除之前的定时器
+            if (tooltipTimer) {
+              clearTimeout(tooltipTimer);
+            }
+            
+            currentItem = item;
+            
+            // 延迟显示tooltip，避免快速移动鼠标时频繁创建
+            tooltipTimer = setTimeout(() => {
+              const index = parseInt(item.dataset.index);
+              const element = visibleElements[index];
+              const fullText = element.textContent.trim() || '[空文本]';
+              
+              // 只有当文本被截断时才显示弹窗
+              if (item.scrollWidth > item.clientWidth) {
+                tooltip = document.createElement('div');
+                tooltip.className = 'xpath-tooltip';
+                tooltip.textContent = fullText;
+                
+                // 先添加到DOM，再计算尺寸和位置
+                document.body.appendChild(tooltip);
+                
+                // 定位弹窗，避免超出屏幕
+                const rect = item.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left = rect.left;
+                let top = rect.bottom + 5;
+                
+                // 如果弹窗会超出屏幕右侧，调整位置
+                if (left + tooltipRect.width > window.innerWidth) {
+                  left = window.innerWidth - tooltipRect.width - 10;
+                }
+                
+                // 如果弹窗会超出屏幕底部，调整位置到元素上方
+                if (top + tooltipRect.height > window.innerHeight) {
+                  top = rect.top - tooltipRect.height - 5;
+                }
+                
+                // 确保不超出屏幕顶部
+                if (top < 0) {
+                  top = 10;
+                }
+                
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+              }
+            }, 300);
+          }
+        });
+        
+        resultList.addEventListener('mouseleave', (e) => {
+          // 检查鼠标是否移动到了另一个结果项
+          const nextItem = e.relatedTarget?.closest('.xpath-result-item');
+          if (nextItem && nextItem !== currentItem) {
+            currentItem = nextItem;
+            return;
+          }
+          
+          // 清除定时器
+          if (tooltipTimer) {
+            clearTimeout(tooltipTimer);
+            tooltipTimer = null;
+          }
+          
+          // 移除tooltip
+          if (tooltip && tooltip.parentNode) {
+            tooltip.remove();
+            tooltip = null;
+          }
+          
+          currentItem = null;
+        });
+      }
     }
     
-    // 限制高亮元素数量，避免整个屏幕布满高亮效果
-    const MAX_HIGHLIGHTS = 50;
-    const elementsToHighlight = visibleElements.slice(0, MAX_HIGHLIGHTS);
-    
-    // 高亮元素
-    elementsToHighlight.forEach(element => {
+    // 高亮所有可见元素
+    visibleElements.forEach(element => {
       highlightElement(element);
     });
-    
-    // 如果元素数量超过限制，更新结果提示
-    if (visibleElements.length > MAX_HIGHLIGHTS) {
-      resultInfo.textContent = `匹配到 ${totalCount} 个元素，其中可跳转/查看的元素 ${visibleElements.length} 个（仅高亮前 ${MAX_HIGHLIGHTS} 个）`;
-    }
     
     // 验证xpath路径是否能匹配到指定元素
     function isXPathValidForElement(xpath, element) {
@@ -1381,7 +1921,8 @@ async function executeXPath() {
       if (item) {
         const index = parseInt(item.dataset.index);
         const element = visibleElements[index];
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 取消自动移动到元素位置的效果
+        // element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
         // 临时增强高亮效果
         element.classList.remove(HIGHLIGHT_CLASS);
         for (let i = 0; i < 6; i++) {
@@ -1389,32 +1930,34 @@ async function executeXPath() {
         }
         setTimeout(() => {
           highlightElement(element);
+          // 添加内部黄色脉冲效果
+          activateElement(element);
           // 获取当前实时查询状态和输入框内容
           const isRealTimeEnabled = panel.querySelector('#xpath-real-time').checked;
           const xpathInput = panel.querySelector('#xpath-input');
           const xpath = xpathInput.value.trim();
           
           // 只有当实时查询关闭时，才考虑自动移除高亮
-          if (!isRealTimeEnabled) {
-            // 检查xpath路径是否有效且能匹配到当前元素
-            const isXPathValid = xpath && isXPathValidForElement(xpath, element);
-            
-            // 如果xpath路径无效或不能匹配到当前元素，3秒后自动移除高亮
-            if (!isXPathValid) {
-              setTimeout(() => {
-                element.classList.remove(HIGHLIGHT_CLASS);
-                // 移除所有层级类
-                for (let i = 0; i < 6; i++) {
-                  element.classList.remove(`level-${i}`);
+              if (!isRealTimeEnabled) {
+                // 检查xpath路径是否有效且能匹配到当前元素
+                const isXPathValid = xpath && isXPathValidForElement(xpath, element);
+                
+                // 如果xpath路径无效或不能匹配到当前元素，3秒后自动移除高亮
+                if (!isXPathValid) {
+                  setTimeout(() => {
+                    element.classList.remove(HIGHLIGHT_CLASS);
+                    // 移除所有层级类
+                    for (let i = 0; i < 6; i++) {
+                      element.classList.remove(`level-${i}`);
+                    }
+                    // 从高亮元素数组中移除
+                    const elementIndex = highlightedElements.indexOf(element);
+                    if (elementIndex > -1) {
+                      highlightedElements.splice(elementIndex, 1);
+                    }
+                  }, 3000);
                 }
-                // 从高亮元素数组中移除
-                const elementIndex = highlightedElements.indexOf(element);
-                if (elementIndex > -1) {
-                  highlightedElements.splice(elementIndex, 1);
-                }
-              }, 3000);
-            }
-          }
+              }
         }, 100);
       }
     });
@@ -1509,6 +2052,40 @@ async function executeXPath() {
   } catch (error) {
     resultInfo.textContent = `错误: ${error.message}`;
     resultList.innerHTML = '';
+    
+    // 隐藏右侧的查询结果展示面板
+    const xpathRight = panel.querySelector('.xpath-right');
+    if (xpathRight) {
+      xpathRight.style.display = 'none';
+    }
+    
+    // 当右侧面板隐藏时，设置左侧面板占据整个面板宽度
+    const xpathLeft = panel.querySelector('.xpath-left');
+    if (xpathLeft) {
+      xpathLeft.style.flex = '1';
+      xpathLeft.style.width = '100%';
+    }
+    
+    // 当右侧面板隐藏时，设置整个面板宽度为240px，与两个窗口同时出现时输入窗口的宽度一致
+    panel.style.width = '240px';
+    
+    // 检查输入框是否为空
+    if (inputValue.trim() === '') {
+      // 当用户不输入路径时，隐藏完整路径显示框
+      if (window.fullPathDisplay) {
+        window.fullPathDisplay.style.display = 'none';
+        window.fullPathDisplay.style.visibility = 'hidden';
+        window.fullPathDisplay.style.opacity = '0';
+      }
+    } else {
+      // 当用户输入路径时，更新完整路径显示框的内容并重新定位它
+      if (window.fullPathDisplay) {
+        // 更新完整路径显示框的内容
+        window.fullPathDisplay.textContent = inputValue;
+        // 重新定位显示框
+        window.positionFullPathDisplay();
+      }
+    }
   }
 }
 

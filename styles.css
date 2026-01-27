@@ -3,16 +3,16 @@
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 550px;
+  width: 480px;
   max-width: 95vw;
-  height: 320px;
-  max-height: 65vh;
+  height: 280px;
+  max-height: 60vh;
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 9999;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: '微软雅黑', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
   cursor: move;
   user-select: none;
@@ -27,9 +27,9 @@
 
 .xpath-panel-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 14px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: move;
@@ -37,7 +37,7 @@
   height: 52px;
   box-sizing: border-box;
   transition: all 0.2s ease;
-  border-radius: 16px 16px 0 0;
+  border-radius: 10px 10px 0 0;
 }
 
 .xpath-panel-header h3 {
@@ -46,12 +46,12 @@
   font-weight: 600;
   color: #1e293b;
   letter-spacing: -0.01em;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: '微软雅黑', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .xpath-header-buttons {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   align-items: center;
   flex-shrink: 0;
 }
@@ -85,7 +85,7 @@
 .xpath-panel-content {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 50px);
+  height: calc(100% - 52px);
   overflow: hidden;
   cursor: default;
   box-sizing: border-box;
@@ -109,6 +109,18 @@
   box-sizing: border-box;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
+}
+
+.xpath-right {
+  flex: 1;
+  padding: 14px;
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .xpath-left h4,
@@ -230,54 +242,73 @@ input:focus + .xpath-slider {
   font-size: 12px;
   color: #666;
   white-space: nowrap;
-  margin-left: 4px;
+  margin-left: 6px;
+  font-weight: 500;
 }
 
-#xpath-search-btn {
-  padding: 6px 14px;
-  background: #3b82f6;
-  color: white;
+#xpath-search-btn, #xpath-full-path-btn {
+  background: #f3f4f6;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
   font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-left: 8px;
-  flex-shrink: 0;
-  height: 30px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer !important;
+  flex-shrink: 0;
+  font-weight: normal;
 }
 
-#xpath-search-btn:hover {
-  background: #2563eb;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+.xpath-search-btn:hover, #xpath-search-btn:hover, #xpath-full-path-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+  transform: scale(1.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.xpath-right {
-  flex: 1;
-  padding: 14px;
-  background: #fafbfc;
+/* 查询按钮弹出窗口样式 */
+.xpath-search-popup {
+  position: fixed;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+  align-items: center;
+  gap: 8px;
+  z-index: 10001;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  min-width: 120px;
+  justify-content: center;
 }
+
+.xpath-header-buttons {
+  position: relative;
+}
+
+/* 使用JavaScript控制弹窗显示/隐藏，不再需要CSS hover */
+
+
 
 .xpath-result-info {
   padding: 8px 12px;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   margin-top: 0;
   margin-bottom: 12px;
   font-size: 12px;
-  color: #1e40af;
+  color: #6b7280;
   box-sizing: border-box;
   overflow: hidden;
   white-space: normal;
@@ -286,7 +317,7 @@ input:focus + .xpath-slider {
   min-height: 32px;
   display: flex;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(30, 64, 175, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .xpath-result-list {
@@ -316,19 +347,19 @@ input:focus + .xpath-slider {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: 1px solid #e2e8f0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.4;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
-  border-radius: 8px;
-  margin-bottom: 6px;
+  border-radius: 6px;
+  margin-bottom: 4px;
   position: relative;
   background-color: white;
-  gap: 12px;
-  height: 52px;
+  gap: 8px;
+  height: 44px;
   overflow: hidden;
 }
 
@@ -349,7 +380,7 @@ input:focus + .xpath-slider {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -504,8 +535,8 @@ input:focus + .xpath-slider {
 
 /* 复制按钮样式 */
 .xpath-copy-btn {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
   padding: 6px;
@@ -517,7 +548,7 @@ input:focus + .xpath-slider {
   justify-content: center;
   width: 36px;
   height: 36px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-top: 2px;
 }
 
@@ -539,6 +570,31 @@ input:focus + .xpath-slider {
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+/* 完整路径显示框样式 */
+.xpath-full-path-display {
+  position: fixed;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 99999;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  color: #495057;
+  white-space: nowrap;
+  overflow: visible;
+  line-height: 1.4;
+  box-sizing: border-box;
+  backdrop-filter: blur(20px);
+  background-clip: padding-box;
+  min-width: auto;
+  max-width: none;
+  width: auto;
+  height: auto;
+  animation: xpath-popup-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 推荐词弹窗 */
@@ -605,7 +661,7 @@ input:focus + .xpath-slider {
   color: #374151;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: '微软雅黑', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -817,18 +873,8 @@ input:focus + .xpath-slider {
 
 /* 高亮样式 */
 .xpath-highlight {
-  outline: none !important;
-  background-color: rgba(59, 130, 246, 0.08) !important;
-  border-radius: 4px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  position: relative !important;
-  z-index: 1 !important;
-  transform: none !important;
+  border-radius: 4px;
+  position: relative;
 }
 
 /* 为高亮元素添加伪元素，用于实现流动虚线边框效果 */
@@ -842,81 +888,31 @@ input:focus + .xpath-slider {
   border-radius: 4px;
   pointer-events: none;
   z-index: -1;
-  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(0deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(0deg, #3b82f6 50%, transparent 50%);
-  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-  background-size: 8px 2px, 8px 2px, 2px 8px, 2px 8px;
-  background-position: left top, right bottom, left bottom, right top;
-  animation: xpath-border-flow 2s linear infinite;
-}
-
-/* 不同层级元素的高亮颜色 */
-.xpath-highlight.level-0 {
-  background-color: rgba(59, 130, 246, 0.08) !important;
-}
-
-.xpath-highlight.level-0::before {
-  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(0deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(0deg, #3b82f6 50%, transparent 50%);
-}
-
-.xpath-highlight.level-1 {
-  background-color: rgba(16, 185, 129, 0.08) !important;
-}
-
-.xpath-highlight.level-1::before {
-  background-image: linear-gradient(90deg, #10b981 50%, transparent 50%),
-                    linear-gradient(90deg, #10b981 50%, transparent 50%),
-                    linear-gradient(0deg, #10b981 50%, transparent 50%),
-                    linear-gradient(0deg, #10b981 50%, transparent 50%);
-}
-
-.xpath-highlight.level-2 {
-  background-color: rgba(245, 158, 11, 0.08) !important;
-}
-
-.xpath-highlight.level-2::before {
   background-image: linear-gradient(90deg, #f59e0b 50%, transparent 50%),
                     linear-gradient(90deg, #f59e0b 50%, transparent 50%),
                     linear-gradient(0deg, #f59e0b 50%, transparent 50%),
                     linear-gradient(0deg, #f59e0b 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 8px 2px, 8px 2px, 2px 8px, 2px 8px;
+  background-position: left top, right bottom, left bottom, right top;
+  animation: xpath-border-flow 2s linear infinite;
+  box-sizing: border-box;
 }
 
-.xpath-highlight.level-3 {
-  background-color: rgba(139, 92, 246, 0.08) !important;
-}
-
-.xpath-highlight.level-3::before {
-  background-image: linear-gradient(90deg, #8b5cf6 50%, transparent 50%),
-                    linear-gradient(90deg, #8b5cf6 50%, transparent 50%),
-                    linear-gradient(0deg, #8b5cf6 50%, transparent 50%),
-                    linear-gradient(0deg, #8b5cf6 50%, transparent 50%);
-}
-
-.xpath-highlight.level-4 {
-  background-color: rgba(239, 68, 68, 0.08) !important;
-}
-
-.xpath-highlight.level-4::before {
-  background-image: linear-gradient(90deg, #ef4444 50%, transparent 50%),
-                    linear-gradient(90deg, #ef4444 50%, transparent 50%),
-                    linear-gradient(0deg, #ef4444 50%, transparent 50%),
-                    linear-gradient(0deg, #ef4444 50%, transparent 50%);
-}
-
-.xpath-highlight.level-5 {
-  background-color: rgba(99, 102, 241, 0.08) !important;
-}
-
-.xpath-highlight.level-5::before {
-  background-image: linear-gradient(90deg, #6366f1 50%, transparent 50%),
-                    linear-gradient(90deg, #6366f1 50%, transparent 50%),
-                    linear-gradient(0deg, #6366f1 50%, transparent 50%),
-                    linear-gradient(0deg, #6366f1 50%, transparent 50%);
+/* 为激活状态的高亮元素添加伪元素，用于实现内部黄色脉冲效果 */
+.xpath-highlight-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: -2;
+  background-color: rgba(245, 158, 11, 0.2);
+  animation: xpath-pulse 1.5s ease-in-out infinite;
+  box-sizing: border-box;
 }
 
 /* 流动虚线边框动画 */
@@ -925,8 +921,29 @@ input:focus + .xpath-slider {
     background-position: 0px 0px, 100% 100%, 0px 100%, 100% 0px;
   }
   100% {
-    background-position: 8px 0px, 90% 100%, 0px 90%, 100% 8px;
+    background-position: 8px 0px, calc(100% - 8px) 100%, 0px calc(100% - 8px), 100% 8px;
   }
+}
+
+
+
+/* 不同层级元素的高亮颜色 */
+.xpath-highlight.level-0 {
+}
+
+.xpath-highlight.level-1 {
+}
+
+.xpath-highlight.level-2 {
+}
+
+.xpath-highlight.level-3 {
+}
+
+.xpath-highlight.level-4 {
+}
+
+.xpath-highlight.level-5 {
 }
 
 /* 元素信息提示框 */
@@ -944,7 +961,7 @@ input:focus + .xpath-slider {
   pointer-events: none;
   word-wrap: break-word;
   white-space: normal;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: '微软雅黑', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   animation: xpath-tooltip-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -996,7 +1013,7 @@ input:focus + .xpath-slider {
   pointer-events: none;
   word-wrap: break-word;
   white-space: normal;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: '微软雅黑', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   animation: xpath-tooltip-fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
