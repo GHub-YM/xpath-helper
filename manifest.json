@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "XPath Helper",
-  "version": "1.0.3",
+  "version": "1.0.4",
   
   "description": "为开发者和测试人员提供的XPath便捷查看定位的工具",
   "action": {
